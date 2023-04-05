@@ -8,7 +8,7 @@ Last Update: 22/03/2021
 """
 
 import sys, os, getopt, re
-from functools import wraps
+from functools import cache, wraps
 
 
 def hamming(s,t):
@@ -44,6 +44,26 @@ def halign(s,t):
 
 def levenshtein(s, t, inscost = 1.0, delcost = 1.0, substcost = 1.0):
     """Recursive implementation of Levenshtein, with alignments returned."""
+
+    @cache
+    def lrec_fast(i, j):
+        # spast, srem = s[:i], s[i:]
+        # tpast, trem = t[:j], t[j:]
+
+        if i == len(s) and j == len(t):
+            return 0, None
+        elif i == len(s):
+            return lrec_fast(i, j + 1)[0] + inscost, 1
+        elif j == len(t):
+            return lrec_fast(i + 1, j)[0] + delcost, -1
+
+        total_sub = lrec_fast(i + 1, j + 1)[0] + (substcost if s[i] != t[j] else 0)
+        total_ins = lrec_fast(i, j + 1)[0] + inscost
+        total_del = lrec_fast(i + 1, j)[0] + delcost
+
+        retval = min([(total_sub, 0), (total_ins, 1), (total_del, -1)], key=lambda x: x[0])
+        return retval
+
     @memolrec
     def lrec(spast, tpast, srem, trem, cost):
         if len(srem) == 0:
@@ -60,9 +80,34 @@ def levenshtein(s, t, inscost = 1.0, delcost = 1.0, substcost = 1.0):
                    lrec(spast + srem[0], tpast + '_', srem[1:], trem, cost + delcost)),
                    key = lambda x: x[4])
 
-    answer = lrec('', '', s, t, 0)
-    return answer[0],answer[1],answer[4]
 
+    fast_cost, action = lrec_fast(0, 0)
+    salign, talign = [], []
+    i, j = 0, 0
+    while action is not None:
+        if action == 1:
+            salign.append("_")
+            talign.append(t[j])
+            j += 1
+        elif action == -1:
+            talign.append("_")
+            salign.append(s[i])
+            i += 1
+        else:
+            salign.append(s[i])
+            talign.append(t[j])
+            i += 1
+            j += 1
+        action = lrec_fast(i, j)[1]
+
+    # answer = lrec('', '', s, t, 0)
+    # assert round(fast_cost, 3) == round(answer[4], 3)
+    # if "".join(salign) != answer[0]:
+    #     print("".join(salign), answer[0])
+    # assert "".join(salign) == answer[0]
+    # assert "".join(talign) == answer[1]
+    # return answer[0],answer[1],answer[4]
+    return "".join(salign), "".join(talign), fast_cost
 
 def memolrec(func):
     """Memoizer for Levenshtein."""
