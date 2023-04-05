@@ -9,7 +9,6 @@ Last Update: 22/03/2021
 
 import sys, os, getopt, re
 from functools import wraps
-from glob import glob
 
 
 def hamming(s,t):
@@ -18,8 +17,6 @@ def hamming(s,t):
 
 def halign(s,t):
     """Align two strings by Hamming distance."""
-    slen = len(s)
-    tlen = len(t)
     minscore = len(s) + len(t) + 1
     for upad in range(0, len(t)+1):
         upper = '_' * upad + s + (len(t) - upad) * '_'
@@ -184,7 +181,7 @@ def main(argv):
         allprules, allsrules = {}, {}
         if not os.path.isfile(path + lang +  ".train"):
             continue
-        lines = [line.strip() for line in open(path + lang + ".train", "r") if line != '\n']
+        lines = [line.strip() for line in open(path + lang + ".train", "r", encoding="utf8") if line != '\n']
 
         # First, test if language is predominantly suffixing or prefixing
         # If prefixing, work with reversed strings
@@ -220,7 +217,7 @@ def main(argv):
                     allsrules[msd][(r[0],r[1])] = 1
 
         # Run eval on dev
-        devlines = [line.strip() for line in open(path + lang + ".dev", "r") if line != '\n']
+        devlines = [line.strip() for line in open(path + lang + ".dev", "r",  encoding="utf8") if line != '\n']
         numcorrect = 0
         numguesses = 0
         if OUTPUT:
