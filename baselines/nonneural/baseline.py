@@ -6,7 +6,7 @@ Author: Mans Hulden
 Modified by: Tiago Pimentel
 Last Update: 22/03/2021
 """
-
+import itertools
 import sys, os, getopt, re
 from functools import cache, wraps
 
@@ -163,32 +163,78 @@ def prefix_suffix_rules_get(lemma, form):
     return prules, srules
 
 
-def apply_best_rule(lemma, msd, allprules, allsrules):
+def apply_best_rule(lemma, msd, allprules, allsrules, num):
     """Applies the longest-matching suffix-changing rule given an input
     form and the MSD. Length ties in suffix rules are broken by frequency.
     For prefix-changing rules, only the most frequent rule is chosen."""
 
-    bestrulelen = 0
-    base = "<" + lemma + ">"
-    if msd not in allprules and msd not in allsrules:
-        return lemma # Haven't seen this inflection, so bail out
+    if num is None:
+        bestrulelen = 0
+        base = "<" + lemma + ">"
+        if msd not in allprules and msd not in allsrules:
+            return lemma # Haven't seen this inflection, so bail out
 
-    if msd in allsrules:
-        applicablerules = [(x[0],x[1],y) for x,y in allsrules[msd].items() if x[0] in base]
-        if applicablerules:
-            bestrule = max(applicablerules, key = lambda x: (len(x[0]), x[2], len(x[1])))
-            base = base.replace(bestrule[0], bestrule[1])
+        if msd in allsrules:
+            applicablerules = [(x[0],x[1],y) for x,y in allsrules[msd].items() if x[0] in base]
+            if applicablerules:
+                bestrule = max(applicablerules, key = lambda x: (len(x[0]), x[2], len(x[1])))
+                base = base.replace(bestrule[0], bestrule[1])
 
-    if msd in allprules:
-        applicablerules = [(x[0],x[1],y) for x,y in allprules[msd].items() if x[0] in base]
-        if applicablerules:
-            bestrule = max(applicablerules, key = lambda x: (x[2]))
-            base = base.replace(bestrule[0], bestrule[1])
+        if msd in allprules:
+            applicablerules = [(x[0],x[1],y) for x,y in allprules[msd].items() if x[0] in base]
+            if applicablerules:
+                bestrule = max(applicablerules, key = lambda x: (x[2]))
+                base = base.replace(bestrule[0], bestrule[1])
 
-    base = base.replace('<', '')
-    base = base.replace('>', '')
-    return base
+        base = base.replace('<', '')
+        base = base.replace('>', '')
+        return base
+    else:
+        bestrulelen = 0
+        base = "<" + lemma + ">"
+        if msd not in allprules and msd not in allsrules:
+            return lemma  # Haven't seen this inflection, so bail out
 
+        if msd in allsrules:
+            applicablerules = [(x[0], x[1], y) for x, y in
+                               allsrules[msd].items() if x[0] in base]
+            # if applicablerules:  # should be fine to comment here if sorting
+            sorted_rules_s = sorted(applicablerules,
+                                    key=lambda x: (len(x[0]), x[2], len(x[1])),
+                                    reverse=True)[:num]
+
+                # base = base.replace(bestrule[0], bestrule[1])
+            in_all_s = True
+        else:
+            in_all_s = False
+            sorted_rules_s = []
+
+        if msd in allprules:
+            applicablerules = [(x[0], x[1], y) for x, y in
+                               allprules[msd].items() if x[0] in base]
+            # if applicablerules:  # should be fine to comment here if sorting
+            sorted_rules_p = sorted(applicablerules, key=lambda x: (x[2]), reverse=True)[:num]
+
+                # base = base.replace(bestrule[0], bestrule[1])
+            in_all_p = True
+        else:
+            in_all_p = False
+            sorted_rules_p = []
+
+        if in_all_p and in_all_s:
+            # TODO: decide on appropriate combination for key here
+            sorted_rules = sorted(itertools.product(sorted_rules_s, sorted_rules_p),
+                                  key=lambda x: (len(x[0][0]), x[0][2] + x[1][2], len(x[0][1])), reverse=True)[:num]
+            out = [base.replace(sr[0], sr[1]).replace(pr[0], pr[1]) for sr, pr in sorted_rules]
+        elif in_all_s:
+            out = [base.replace(r[0], r[1]) for r in sorted_rules_s]
+        elif in_all_p:
+            out = [base.replace(r[0], r[1]) for r in sorted_rules_p]
+        else:
+            raise ValueError
+
+        out = [b.replace('<', '').replace('>', '') for b in out]
+        return out
 
 def numleadingsyms(s, symbol):
     return len(s) - len(s.lstrip(symbol))
@@ -201,8 +247,9 @@ def numtrailingsyms(s, symbol):
 
 
 def main(argv):
-    options, remainder = getopt.gnu_getopt(argv[1:], 'ohp:', ['output','help','path='])
+    options, remainder = getopt.gnu_getopt(argv[1:], 'ohp:n:', ['output','help','path=','number='])
     OUTPUT, HELP, path = False, False, './part1/development_languages/'
+    num = None
     for opt, arg in options:
         if opt in ('-o', '--output'):
             OUTPUT = True
@@ -210,6 +257,8 @@ def main(argv):
             HELP = True
         elif opt in ('-p', '--path'):
             path = arg
+        elif opt in ('-n', '--number'):
+            num = int(arg)
 
     if HELP:
             print("\n*** Baseline for the SIGMORPHON 2020 shared task ***\n")
@@ -272,15 +321,25 @@ def main(argv):
 #                    lemma, msd, = l.split(u'\t')
             if prefbias > suffbias:
                 lemma = lemma[::-1]
-            outform = apply_best_rule(lemma, msd, allprules, allsrules)
-            if prefbias > suffbias:
-                outform = outform[::-1]
-                lemma = lemma[::-1]
-            if outform == correct:
-                numcorrect += 1
-            numguesses += 1
-            if OUTPUT:
-                outfile.write(lemma + "\t" + outform + "\t" + msd + "\n")
+            outform = apply_best_rule(lemma, msd, allprules, allsrules, num)
+            if num is None:
+                if prefbias > suffbias:
+                    outform = outform[::-1]
+                    lemma = lemma[::-1]
+                if outform == correct:
+                    numcorrect += 1
+                numguesses += 1
+                if OUTPUT:
+                    outfile.write(lemma + "\t" + outform + "\t" + msd + "\n")
+            else:
+                if prefbias > suffbias:
+                    outform = [o[::-1] for o in outform]
+                    lemma = lemma[::-1]
+                if correct in outform:
+                    numcorrect += 1
+                numguesses += 1
+                if OUTPUT:
+                    outfile.write(lemma + "\t" + ", ".join(outform) + "\t" + msd + "\n")
 
         if OUTPUT:
             outfile.close()
