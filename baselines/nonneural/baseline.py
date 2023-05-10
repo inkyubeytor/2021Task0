@@ -315,7 +315,7 @@ def main(argv):
         numcorrect = 0
         numguesses = 0
         if OUTPUT:
-            outfile = open(path + lang + "-out", "w")
+            outfile = open(path + lang + "-out", "w", encoding="utf8")
         for l in devlines:
             lemma, correct, msd, = l.split(u'\t')
 #                    lemma, msd, = l.split(u'\t')
