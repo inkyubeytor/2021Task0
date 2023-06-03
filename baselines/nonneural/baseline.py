@@ -270,12 +270,16 @@ def main(argv):
             print(" -p [path]  data files path. Default is ./part1/development_languages/")
             quit()
 
+    train_suffix = "train"
+    test_suffix = "dev"
+    train_ending = f".{train_suffix}"
+
     totalavg, numlang = 0.0, 0
-    for lang in sorted(list({re.sub('\.train.*$','',d) for d in os.listdir(path) if '.train' in d})):
+    for lang in sorted(list({re.sub(f'\.{train_suffix}.*$','',d) for d in os.listdir(path) if train_ending in d})):
         allprules, allsrules = {}, {}
-        if not os.path.isfile(path + lang +  ".train"):
+        if not os.path.isfile(path + lang + train_ending):
             continue
-        lines = [line.strip() for line in open(path + lang + ".train", "r", encoding="utf8") if line != '\n']
+        lines = [line.strip() for line in open(path + lang + train_ending, "r", encoding="utf8") if line != '\n']
 
         # First, test if language is predominantly suffixing or prefixing
         # If prefixing, work with reversed strings
@@ -311,7 +315,8 @@ def main(argv):
                     allsrules[msd][(r[0],r[1])] = 1
 
         # Run eval on dev
-        devlines = [line.strip() for line in open(path + lang + ".dev", "r",  encoding="utf8") if line != '\n']
+        devlines = [line.strip() for line in open(path + lang + f".{test_suffix}", "r",  encoding="utf8") if line != '\n']
+
         numcorrect = 0
         numguesses = 0
         if OUTPUT:
@@ -330,7 +335,8 @@ def main(argv):
                     numcorrect += 1
                 numguesses += 1
                 if OUTPUT:
-                    outfile.write(lemma + "\t" + outform + "\t" + msd + "\n")
+                    # outfile.write(lemma + "\t" + outform + "\t" + msd + "\n")
+                    outfile.write(outform + "\n")
             else:
                 if prefbias > suffbias:
                     outform = [o[::-1] for o in outform]
