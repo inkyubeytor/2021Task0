@@ -270,8 +270,12 @@ def main(argv):
             print(" -p [path]  data files path. Default is ./part1/development_languages/")
             quit()
 
-    train_suffix = "train"
-    test_suffix = "dev"
+    # SWITCHED FOR WUG DATA
+    # train_suffix = "train"
+    train_suffix = "trn"
+    # SWITCHED FOR WUG DATA
+    # test_suffix = "test"
+    test_suffix = "tst"
     train_ending = f".{train_suffix}"
 
     totalavg, numlang = 0.0, 0
@@ -280,18 +284,21 @@ def main(argv):
         if not os.path.isfile(path + lang + train_ending):
             continue
         lines = [line.strip() for line in open(path + lang + train_ending, "r", encoding="utf8") if line != '\n']
-
         # First, test if language is predominantly suffixing or prefixing
         # If prefixing, work with reversed strings
         prefbias, suffbias = 0,0
         for l in lines:
-            lemma, form, _ = l.split(u'\t')
+            # SWITCHED FOR WUG DATA
+            # lemma, form, _ = l.split(u'\t')
+            lemma, _, form = l.split(u'\t')
             aligned = halign(lemma, form)
             if ' ' not in aligned[0] and ' ' not in aligned[1] and '-' not in aligned[0] and '-' not in aligned[1]:
                 prefbias += numleadingsyms(aligned[0],'_') + numleadingsyms(aligned[1],'_')
                 suffbias += numtrailingsyms(aligned[0],'_') + numtrailingsyms(aligned[1],'_')
         for l in lines: # Read in lines and extract transformation rules from pairs
-            lemma, form, msd = l.split(u'\t')
+            # SWITCHED FOR WUG DATA
+            # lemma, form, msd = l.split(u'\t')
+            lemma, msd, form = l.split(u'\t')
             if prefbias > suffbias:
                 lemma = lemma[::-1]
                 form = form[::-1]
@@ -320,9 +327,11 @@ def main(argv):
         numcorrect = 0
         numguesses = 0
         if OUTPUT:
-            outfile = open(path + lang + "-out", "w", encoding="utf8")
+            outfile = open(path + lang + ".out", "w", encoding="utf8")
         for l in devlines:
-            lemma, correct, msd, = l.split(u'\t')
+            # SWITCHED FOR WUG DATA
+            # lemma, correct, msd, = l.split(u'\t')
+            lemma, msd, correct = l.split(u'\t')
 #                    lemma, msd, = l.split(u'\t')
             if prefbias > suffbias:
                 lemma = lemma[::-1]
