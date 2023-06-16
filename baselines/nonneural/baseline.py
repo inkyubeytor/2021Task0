@@ -274,8 +274,9 @@ def main(argv):
     # train_suffix = "train"
     train_suffix = "trn"
     # SWITCHED FOR WUG DATA
-    # test_suffix = "test"
-    test_suffix = "tst"
+    # test_suffix = "dev"
+    # test_suffix = "tst"
+    test_suffix = "nonce"
     train_ending = f".{train_suffix}"
 
     totalavg, numlang = 0.0, 0
@@ -327,12 +328,12 @@ def main(argv):
         numcorrect = 0
         numguesses = 0
         if OUTPUT:
-            outfile = open(path + lang + ".out", "w", encoding="utf8")
+            outfile = open(path + lang + test_suffix + ".out", "w", encoding="utf8")
         for l in devlines:
             # SWITCHED FOR WUG DATA
             # lemma, correct, msd, = l.split(u'\t')
-            lemma, msd, correct = l.split(u'\t')
-#                    lemma, msd, = l.split(u'\t')
+            # lemma, msd, correct = l.split(u'\t')
+            lemma, msd = l.split(u'\t')
             if prefbias > suffbias:
                 lemma = lemma[::-1]
             outform = apply_best_rule(lemma, msd, allprules, allsrules, num)
@@ -340,8 +341,8 @@ def main(argv):
                 if prefbias > suffbias:
                     outform = outform[::-1]
                     lemma = lemma[::-1]
-                if outform == correct:
-                    numcorrect += 1
+                # if outform == correct:
+                #     numcorrect += 1
                 numguesses += 1
                 if OUTPUT:
                     # outfile.write(lemma + "\t" + outform + "\t" + msd + "\n")
@@ -350,8 +351,8 @@ def main(argv):
                 if prefbias > suffbias:
                     outform = [o[::-1] for o in outform]
                     lemma = lemma[::-1]
-                if correct in outform:
-                    numcorrect += 1
+                # if correct in outform:
+                #     numcorrect += 1
                 numguesses += 1
                 if OUTPUT:
                     outfile.write(lemma + "\t" + ", ".join(outform) + "\t" + msd + "\n")
